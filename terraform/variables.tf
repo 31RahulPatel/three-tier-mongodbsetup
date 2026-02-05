@@ -31,19 +31,19 @@ variable "private_subnet_cidrs" {
 variable "web_instance_type" {
   description = "Instance type for web tier"
   type        = string
-  default     = "t3.micro"
+  default     = "c7i-flex.large"
 }
 
 variable "app_instance_type" {
   description = "Instance type for app tier"
   type        = string
-  default     = "t3.small"
+  default     = "c7i-flex.large"
 }
 
 variable "db_instance_type" {
   description = "Instance type for database tier"
   type        = string
-  default     = "t3.medium"
+  default     = "c7i-flex.large"
 }
 
 variable "key_name" {

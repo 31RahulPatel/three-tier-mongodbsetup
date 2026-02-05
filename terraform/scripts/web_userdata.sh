@@ -126,8 +126,8 @@ EOF
 
 # Clone application code
 cd /opt
-git clone https://github.com/YOUR_USERNAME/coffee-shop-app.git
-cd coffee-shop-app/application/frontend
+git clone https://github.com/31RahulPatel/three-tier-mongodbsetup.git
+cd three-tier-mongodbsetup/application/frontend
 
 # Build React app
 npm install
