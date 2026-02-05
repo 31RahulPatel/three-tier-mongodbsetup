@@ -1,0 +1,70 @@
+name: Deploy Coffee Shop App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install Backend Dependencies
+      run: |
+        cd application/backend
+        npm install
+        
+    - name: Install Frontend Dependencies
+      run: |
+        cd application/frontend
+        npm install
+        
+    - name: Build Frontend
+      run: |
+        cd application/frontend
+        npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+        
+    - name: Deploy to EC2
+      run: |
+        # Get instance IDs
+        WEB_INSTANCES=$(aws ec2 describe-instances --filters "Name=tag:Tier,Values=Web" "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].InstanceId' --output text)
+        APP_INSTANCES=$(aws ec2 describe-instances --filters "Name=tag:Tier,Values=App" "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].InstanceId' --output text)
+        
+        # Update web instances
+        for instance in $WEB_INSTANCES; do
+          aws ssm send-command \
+            --instance-ids $instance \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["cd /opt/coffee-shop-app && git pull origin main && cd application/frontend && npm run build && cp -r build/* /var/www/html/ && systemctl reload nginx"]'
+        done
+        
+        # Update app instances
+        for instance in $APP_INSTANCES; do
+          aws ssm send-command \
+            --instance-ids $instance \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["cd /opt/coffee-shop-app && git pull origin main && cd application/backend && npm install && systemctl restart coffee-app"]'
+        done
